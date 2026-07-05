@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+
+<html class="scroll-smooth" lang="en"><head>
+<!-- ============================================================
+     DEPLOYMENT CONFIG — edit this one line when you deploy the
+     backend (Render/Railway/Fly.io/etc). Example:
+     window.NEUROSENSE_API_BASE_URL = 'https://neurosense-api.onrender.com';
+     ============================================================ -->
+<script>window.NEUROSENSE_API_BASE_URL = 'http://localhost:8000';</script>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NeuroSense AI | EEG-Based Seizure Detection</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist:wght@400;500;600&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<style>
+        :root {
+            --mouse-x: 50%;
+            --mouse-y: 50%;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at var(--mouse-x) var(--mouse-y), rgba(6, 182, 212, 0.1) 0%, transparent 80%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        .glass-card:hover::before {
+            opacity: 1;
+        }
+        .glass-card:hover {
+            transform: translateY(-8px) scale(1.02) rotateX(2deg) rotateY(2deg);
+            box-shadow: 0 20px 40px rgba(0, 81, 213, 0.1);
+            border-color: #06b6d4;
+        }
+        .text-gradient {
+            background: linear-gradient(135deg, #000513 0%, #0051d5 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .bg-medical-gradient {
+            background: linear-gradient(135deg, #06b6d4 0%, #0051d5 100%);
+            transition: all 0.3s ease;
+        }
+        .bg-medical-gradient:hover {
+            filter: brightness(1.1);
+            box-shadow: 0 8px 25px rgba(6, 182, 212, 0.4);
+        }
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        @keyframes pulse-cyan {
+            0% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(6, 182, 212, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0); }
+        }
+        .pulse-indicator {
+            animation: pulse-cyan 2s infinite;
+        }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        .animate-float { animation: float 6s ease-in-out infinite; }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary": "#000513",
+                        "on-surface-variant": "#44474e",
+                        "on-surface": "#191c1e",
+                        "outline-variant": "#c4c6cf",
+                        "surface-container": "#eceef0",
+                        "on-tertiary-container": "#0093ab",
+                        "surface-container-high": "#e6e8ea",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed-variant": "#003ea8",
+                        "on-tertiary-fixed": "#001f26",
+                        "on-secondary-fixed": "#00174b",
+                        "on-error-container": "#93000a",
+                        "surface-bright": "#f7f9fb",
+                        "on-primary-container": "#7387ab",
+                        "on-background": "#191c1e",
+                        "on-primary-fixed-variant": "#344768",
+                        "error": "#ba1a1a",
+                        "inverse-primary": "#b3c7ef",
+                        "tertiary": "#000608",
+                        "surface-tint": "#4c5f81",
+                        "inverse-surface": "#2d3133",
+                        "primary-fixed": "#d6e3ff",
+                        "on-primary-fixed": "#041b3a",
+                        "error-container": "#ffdad6",
+                        "primary-container": "#071e3d",
+                        "secondary": "#0051d5",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-low": "#f2f4f6",
+                        "on-tertiary-fixed-variant": "#004e5c",
+                        "surface-variant": "#e0e3e5",
+                        "on-error": "#ffffff",
+                        "tertiary-fixed-dim": "#4cd7f6",
+                        "on-secondary-container": "#fefcff",
+                        "background": "#f7f9fb",
+                        "tertiary-container": "#002229",
+                        "outline": "#74777f",
+                        "surface-container-highest": "#e0e3e5",
+                        "inverse-on-surface": "#eff1f3",
+                        "surface": "#f7f9fb",
+                        "secondary-fixed-dim": "#b4c5ff",
+                        "tertiary-fixed": "#acedff",
+                        "surface-dim": "#d8dadc",
+                        "primary-fixed-dim": "#b3c7ef",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed": "#dbe1ff",
+                        "secondary-container": "#316bf3"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "base": "8px",
+                        "md": "24px",
+                        "xs": "4px",
+                        "margin-desktop": "48px",
+                        "sm": "12px",
+                        "lg": "40px",
+                        "margin-mobile": "16px",
+                        "container-max": "1440px",
+                        "xl": "64px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Inter"],
+                        "label-sm": ["Geist"],
+                        "body-lg": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "label-md": ["Geist"],
+                        "display-xl": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["40px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                        "label-sm": ["12px", {"lineHeight": "1.2", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "1.6", "letterSpacing": "0", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                        "label-md": ["14px", {"lineHeight": "1.2", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                        "display-xl": ["64px", {"lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "1.5", "letterSpacing": "0", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "1.3", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface font-body-md overflow-x-hidden">
+<!-- Navigation -->
+<nav class="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-white/20 shadow-sm transition-all duration-300">
+<div class="flex justify-between items-center max-w-container-max mx-auto px-margin-desktop h-20">
+<div class="font-headline-md text-headline-md font-bold text-primary cursor-pointer hover:opacity-80 transition-opacity">NeuroSense AI</div>
+<div class="hidden md:flex gap-lg items-center">
+<a class="text-on-surface-variant font-body-md hover:text-secondary transition-colors" href="#pipeline">Platform</a>
+<a class="text-on-surface-variant font-body-md hover:text-secondary transition-colors" href="#prediction">Prediction</a>
+<button class="bg-primary text-on-primary px-lg py-sm rounded-full font-label-md hover:scale-105 active:scale-95 transition-all shadow-md">Try Live</button>
+</div>
+</div>
+</nav>
+<!-- Hero Section -->
+<header class="relative pt-xl pb-24 overflow-hidden min-h-screen flex items-center">
+<div class="max-w-container-max mx-auto px-margin-desktop grid grid-cols-1 lg:grid-cols-2 gap-xl items-center relative z-10">
+<div class="space-y-md">
+<div class="inline-flex items-center gap-xs px-sm py-xs bg-secondary/10 text-secondary rounded-full font-label-sm pulse-indicator">
+<span class="material-symbols-outlined text-[16px]">neurology</span>
+                    Advanced Precision Medicine
+                </div>
+<h1 class="font-display-xl text-display-xl text-primary leading-tight">
+                    EEG-Based <br/>
+<span class="text-gradient" style="background: linear-gradient(135deg, rgb(0, 5, 19) 0%, rgb(6, 182, 212) 100%) text; -webkit-text-fill-color: transparent;">Epileptic Seizure Detection</span>
+</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-xl">
+                    AI-powered clinical decision support system for detecting epileptic seizures from EEG signals using Ensemble Machine Learning. Delivering clinical-grade accuracy in milliseconds.
+                </p>
+<div class="flex flex-wrap gap-md pt-base">
+<a class="bg-medical-gradient text-on-primary px-xl py-md rounded-full font-headline-md shadow-lg hover:scale-105 active:scale-95 transition-all inline-block" href="#prediction">
+                        Try Live Prediction
+                    </a>
+<a class="border border-outline text-primary px-xl py-md rounded-full font-headline-md hover:bg-surface-variant hover:scale-105 active:scale-95 transition-all inline-block" href="#pipeline">
+                        View Pipeline
+                    </a>
+</div>
+</div>
+<div class="relative h-[600px] w-full flex items-center justify-center">
+<div class="absolute inset-0 bg-secondary/5 rounded-full blur-[100px]"></div>
+<div class="w-full h-full animate-float" id="threejs-container-ANIMATION_2"></div>
+</div>
+</div>
+</header>
+<!-- Stats Section -->
+<section class="py-xl bg-surface-container-low reveal">
+<div class="max-w-container-max mx-auto px-margin-desktop">
+<div id="hero-stats-placeholder" class="glass-card p-lg text-center rounded-xl text-on-surface-variant">
+<span class="material-symbols-outlined text-[32px] mb-xs block">query_stats</span>
+Model metrics will appear here once a prediction has been run.
+</div>
+<div id="hero-stats-content" class="hidden grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-md">
+<div class="glass-card p-lg text-center rounded-xl">
+<div class="text-secondary font-display-xl text-headline-lg">98.32%</div>
+<div class="font-label-md text-on-surface-variant">Accuracy</div>
+</div>
+<div class="glass-card p-lg text-center rounded-xl">
+<div class="text-secondary font-display-xl text-headline-lg">66.67%</div>
+<div class="font-label-md text-on-surface-variant">Sensitivity</div>
+</div>
+<div class="glass-card p-lg text-center rounded-xl">
+<div class="text-secondary font-display-xl text-headline-lg">99.65%</div>
+<div class="font-label-md text-on-surface-variant">Specificity</div>
+</div>
+<div class="glass-card p-lg text-center rounded-xl">
+<div class="text-secondary font-display-xl text-headline-lg">0.994</div>
+<div class="font-label-md text-on-surface-variant">AUC-ROC</div>
+</div>
+<div class="glass-card p-lg text-center rounded-xl">
+<div class="text-secondary font-display-xl text-headline-lg">50</div>
+<div class="font-label-md text-on-surface-variant">Selected Features</div>
+</div>
+<div class="glass-card p-lg text-center rounded-xl">
+<div class="text-secondary font-display-xl text-headline-lg" id="hero-window-count">--</div>
+<div class="font-label-md text-on-surface-variant">Windows Analyzed</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Problem Statement -->
+<section class="py-xl reveal">
+<div class="max-w-container-max mx-auto px-margin-desktop">
+<div class="text-center mb-xl">
+<h2 class="font-headline-lg text-headline-lg text-primary mb-sm">Addressing the Clinical Challenge</h2>
+<p class="text-on-surface-variant font-body-md max-w-2xl mx-auto">Bridging the gap between vast neurological data and rapid, actionable clinical insights.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter">
+<div class="glass-card p-lg rounded-xl">
+<span class="material-symbols-outlined text-secondary text-[40px] mb-md">groups</span>
+<h3 class="font-headline-md text-primary mb-sm">50M+ Affected</h3>
+<p class="text-on-surface-variant text-body-md">Epilepsy is one of the most common neurological diseases globally.</p>
+</div>
+<div class="glass-card p-lg rounded-xl">
+<span class="material-symbols-outlined text-secondary text-[40px] mb-md">timer</span>
+<h3 class="font-headline-md text-primary mb-sm">Slow Interpretation</h3>
+<p class="text-on-surface-variant text-body-md">Manual EEG reading by neurologists is time-consuming and expertise-dependent.</p>
+</div>
+<div class="glass-card p-lg rounded-xl">
+<span class="material-symbols-outlined text-secondary text-[40px] mb-md">clinical_notes</span>
+<h3 class="font-headline-md text-primary mb-sm">Automation Need</h3>
+<p class="text-on-surface-variant text-body-md">Scalable systems are required to manage long-term EEG monitoring sessions.</p>
+</div>
+<div class="glass-card p-lg rounded-xl">
+<span class="material-symbols-outlined text-secondary text-[40px] mb-md">psychology</span>
+<h3 class="font-headline-md text-primary mb-sm">AI-Assisted</h3>
+<p class="text-on-surface-variant text-body-md">Augmenting clinicians with high-precision automated detection tools.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Pipeline Section -->
+<section class="py-xl bg-primary text-on-primary reveal" id="pipeline">
+<div class="max-w-container-max mx-auto px-margin-desktop">
+<h2 class="font-headline-lg text-headline-lg mb-xl text-center">End-to-End Computational Pipeline</h2>
+<div class="relative overflow-x-auto pb-lg">
+<div class="flex justify-between items-center min-w-[1000px] gap-md px-md">
+<div class="flex-1 flex flex-col items-center gap-sm relative group">
+<div class="w-16 h-16 rounded-full flex items-center justify-center shadow-lg bg-cyan-400 group-hover:scale-110 transition-transform"><span class="material-symbols-outlined">database</span></div>
+<span class="font-label-md">EEG Dataset</span>
+<div class="absolute -right-4 top-8 text-on-primary/30 material-symbols-outlined">arrow_forward</div>
+</div>
+<div class="flex-1 flex flex-col items-center gap-sm relative group">
+<div class="w-16 h-16 rounded-full bg-secondary/80 flex items-center justify-center shadow-lg bg-cyan-400 group-hover:scale-110 transition-transform"><span class="material-symbols-outlined">content_cut</span></div>
+<span class="font-label-md">Segmentation</span>
+<div class="absolute -right-4 top-8 text-on-primary/30 material-symbols-outlined">arrow_forward</div>
+</div>
+<div class="flex-1 flex flex-col items-center gap-sm relative group">
+<div class="w-16 h-16 rounded-full bg-secondary/60 flex items-center justify-center shadow-lg bg-cyan-400 group-hover:scale-110 transition-transform"><span class="material-symbols-outlined">analytics</span></div>
+<span class="font-label-md">Extraction</span>
+<div class="absolute -right-4 top-8 text-on-primary/30 material-symbols-outlined">arrow_forward</div>
+</div>
+<div class="flex-1 flex flex-col items-center gap-sm relative group">
+<div class="w-16 h-16 rounded-full bg-secondary/40 flex items-center justify-center shadow-lg bg-cyan-400 group-hover:scale-110 transition-transform"><span class="material-symbols-outlined">filter_list</span></div>
+<span class="font-label-md">Selection</span>
+<div class="absolute -right-4 top-8 text-on-primary/30 material-symbols-outlined">arrow_forward</div>
+</div>
+<div class="flex-1 flex flex-col items-center gap-sm relative group">
+<div class="w-16 h-16 rounded-full bg-secondary/30 flex items-center justify-center shadow-lg bg-cyan-400 group-hover:scale-110 transition-transform"><span class="material-symbols-outlined">balance</span></div>
+<span class="font-label-md">SMOTE</span>
+<div class="absolute -right-4 top-8 text-on-primary/30 material-symbols-outlined">arrow_forward</div>
+</div>
+<div class="flex-1 flex flex-col items-center gap-sm relative group">
+<div class="w-16 h-16 rounded-full bg-secondary/20 flex items-center justify-center shadow-lg bg-cyan-400 group-hover:scale-110 transition-transform"><span class="material-symbols-outlined">model_training</span></div>
+<span class="font-label-md">Training</span>
+<div class="absolute -right-4 top-8 text-on-primary/30 material-symbols-outlined">arrow_forward</div>
+</div>
+<div class="flex-1 flex flex-col items-center gap-sm relative group">
+<div class="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center shadow-lg border border-secondary/40 bg-cyan-400 group-hover:scale-110 transition-transform"><span class="material-symbols-outlined">hub</span></div>
+<span class="font-label-md">Ensemble</span>
+<div class="absolute -right-4 top-8 text-on-primary/30 material-symbols-outlined">arrow_forward</div>
+</div>
+<div class="flex-1 flex flex-col items-center gap-sm group">
+<div class="w-20 h-20 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(0,81,213,0.5)] bg-cyan-400 group-hover:scale-110 transition-transform"><span class="material-symbols-outlined text-3xl">task_alt</span></div>
+<span class="font-label-md font-bold">Result</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Frequency Bands -->
+<section class="py-xl reveal">
+<div class="max-w-container-max mx-auto px-margin-desktop">
+<h2 class="font-headline-lg text-headline-lg text-center mb-xl">Spectral Analysis Domains</h2>
+<div class="grid grid-cols-1 md:grid-cols-5 gap-md">
+<div class="glass-card p-md rounded-xl text-center group cursor-pointer border-transparent hover:border-blue-400">
+<div class="h-2 bg-blue-400 w-full mb-md rounded-full group-hover:h-3 transition-all"></div>
+<h4 class="font-headline-md">Delta</h4>
+<p class="text-label-sm text-on-surface-variant">0.5 - 4 Hz</p>
+</div>
+<div class="glass-card p-md rounded-xl text-center group cursor-pointer ring-2 ring-cyan-400 hover:ring-4 transition-all">
+<div class="h-2 bg-cyan-400 w-full mb-md rounded-full group-hover:h-3 transition-all"></div>
+<h4 class="font-headline-md">Theta</h4>
+<p class="text-label-sm text-on-surface-variant">4 - 8 Hz</p>
+</div>
+<div class="glass-card p-md rounded-xl text-center group cursor-pointer border-transparent hover:border-emerald-400">
+<div class="h-2 bg-emerald-400 w-full mb-md rounded-full group-hover:h-3 transition-all"></div>
+<h4 class="font-headline-md">Alpha</h4>
+<p class="text-label-sm text-on-surface-variant">8 - 13 Hz</p>
+</div>
+<div class="glass-card p-md rounded-xl text-center group cursor-pointer border-transparent hover:border-amber-400">
+<div class="h-2 bg-amber-400 w-full mb-md rounded-full group-hover:h-3 transition-all"></div>
+<h4 class="font-headline-md">Beta</h4>
+<p class="text-label-sm text-on-surface-variant">13 - 30 Hz</p>
+</div>
+<div class="glass-card p-md rounded-xl text-center group cursor-pointer border-transparent hover:border-rose-400">
+<div class="h-2 bg-rose-400 w-full mb-md rounded-full group-hover:h-3 transition-all"></div>
+<h4 class="font-headline-md">Gamma</h4>
+<p class="text-label-sm text-on-surface-variant">&gt; 30 Hz</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Live Prediction (Primary Feature) -->
+<section class="py-xl bg-surface-container" id="prediction">
+<div class="max-w-container-max mx-auto px-margin-desktop">
+<div class="text-center mb-xl">
+<h2 class="font-headline-lg text-headline-lg text-primary">Live Inference Engine</h2>
+<p class="text-on-surface-variant max-w-xl mx-auto">Upload clinical EEG data in CSV format for instant AI diagnostic analysis.</p>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-xl">
+<div class="lg:col-span-2">
+<div id="dropzone" class="glass-card bg-white p-xl rounded-2xl border-dashed border-2 border-outline-variant hover:border-secondary transition-colors group cursor-pointer">
+<div class="flex flex-col items-center justify-center py-xl text-center space-y-md">
+<span class="material-symbols-outlined text-[64px] group-hover:scale-110 transition-transform text-cyan-400">upload_file</span>
+<div>
+<h3 class="font-headline-md text-primary">Drag and drop EEG data</h3>
+<p class="text-on-surface-variant">Support for .mat and .csv files (Max 200MB)</p>
+<p class="text-on-surface-variant text-label-sm mt-xs" id="selected-filename"></p>
+</div>
+<input type="file" id="file-input" accept=".mat,.csv" class="hidden" />
+<button type="button" class="bg-primary text-on-primary px-lg py-sm rounded-full font-label-md hover:scale-105 active:scale-95 transition-all" onclick="document.getElementById('file-input').click()">Browse Files</button>
+</div>
+</div>
+<div class="mt-md flex justify-end">
+<button class="bg-medical-gradient text-on-primary px-xl py-md rounded-xl font-headline-md shadow-lg flex items-center gap-sm active:scale-95 transition-all" id="execute-btn" onclick="runPrediction()" disabled>
+<span class="material-symbols-outlined">bolt</span>
+                            Execute Prediction
+                        </button>
+</div>
+</div>
+<div class="space-y-md opacity-50 transition-opacity duration-500" id="result-pane">
+<div class="glass-card bg-white p-lg rounded-2xl">
+<h4 class="font-label-sm text-on-surface-variant mb-md uppercase tracking-wider">Analysis Status</h4>
+<div class="flex items-center gap-sm">
+<div class="w-3 h-3 bg-secondary rounded-full pulse-indicator" id="status-bulb"></div>
+<span class="font-headline-md text-primary" id="prediction-status">Waiting for data...</span>
+</div>
+</div>
+<div class="glass-card bg-white p-lg rounded-2xl relative overflow-hidden">
+<div class="absolute top-0 right-0 p-md font-label-sm rounded-bl-xl bg-surface-container transition-colors duration-500" id="risk-indicator">PENDING</div>
+<h4 class="font-label-sm text-on-surface-variant mb-sm uppercase tracking-wider">Confidence Level</h4>
+<div class="text-headline-lg font-bold text-primary mb-md" id="confidence-score">--%</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-secondary h-full transition-all duration-1000" id="confidence-bar" style="width: 0%"></div>
+</div>
+<p class="text-label-sm text-on-surface-variant mt-sm">Prediction = average seizure probability vs. trained threshold</p>
+<div class="mt-xl space-y-sm">
+<div class="flex justify-between font-label-md">
+<span class="text-on-surface-variant">Prediction</span>
+<span class="text-primary font-bold" id="prediction-val">Undefined</span>
+</div>
+<div class="flex justify-between font-label-md">
+<span class="text-on-surface-variant">Avg. Seizure Probability</span>
+<span class="text-primary font-bold" id="avg-prob-val">0.00</span>
+</div>
+<div class="flex justify-between font-label-md">
+<span class="text-on-surface-variant">Decision Threshold</span>
+<span class="text-primary font-bold" id="threshold-val">0.00</span>
+</div>
+<div class="flex justify-between font-label-md">
+<span class="text-on-surface-variant">Risk Level</span>
+<span class="text-primary font-bold" id="risk-val">Undefined</span>
+</div>
+</div>
+</div>
+<div class="glass-card bg-white p-lg rounded-2xl">
+<h4 class="font-label-sm text-on-surface-variant mb-md uppercase tracking-wider">Window-Level Explainability <span class="normal-case text-on-surface-variant/70">(does not affect prediction)</span></h4>
+<div class="space-y-sm">
+<div class="flex justify-between font-label-md">
+<span class="text-on-surface-variant">Total Windows</span>
+<span class="text-primary font-bold" id="total-windows-val">--</span>
+</div>
+<div class="flex justify-between font-label-md">
+<span class="text-on-surface-variant">Seizure Windows</span>
+<span class="text-primary font-bold" id="seizure-windows-val">--</span>
+</div>
+<div class="flex justify-between font-label-md">
+<span class="text-on-surface-variant">% Seizure Windows</span>
+<span class="text-primary font-bold" id="pct-windows-val">--%</span>
+</div>
+<div class="flex justify-between font-label-md">
+<span class="text-on-surface-variant">Max Seizure Probability</span>
+<span class="text-primary font-bold" id="max-prob-val">--</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Dashboard/Visuals -->
+<section class="py-xl reveal">
+<div class="max-w-container-max mx-auto px-margin-desktop">
+<h2 class="font-headline-lg text-headline-lg mb-xl">Model Performance Analytics</h2>
+<p class="text-on-surface-variant text-label-sm mb-lg -mt-lg">From the last training run's held-out test set (not per-upload — updates only when the model is retrained)</p>
+<div class="relative">
+<div id="model-performance-placeholder" class="glass-card p-xl rounded-2xl text-center text-on-surface-variant">
+<span class="material-symbols-outlined text-[40px] mb-sm block">analytics</span>
+Run a prediction below to view model performance metrics.
+</div>
+<div id="model-performance-content" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter">
+<div class="glass-card p-lg rounded-2xl">
+<h3 class="font-label-md text-on-surface-variant mb-md">Confusion Matrix</h3>
+<div class="aspect-square bg-surface-container-low rounded-xl flex items-center justify-center overflow-hidden">
+<div class="grid grid-cols-2 gap-xs w-4/5 h-4/5">
+<div class="bg-secondary/90 flex items-center justify-center text-on-primary font-bold transition-transform hover:scale-105 cursor-default">TN: 99.6%</div>
+<div class="bg-secondary/10 flex items-center justify-center text-secondary font-bold transition-transform hover:scale-105 cursor-default">FP: 0.4%</div>
+<div class="bg-secondary/20 flex items-center justify-center text-secondary font-bold transition-transform hover:scale-105 cursor-default">FN: 33.3%</div>
+<div class="bg-secondary/80 flex items-center justify-center text-on-primary font-bold transition-transform hover:scale-105 cursor-default">TP: 66.7%</div>
+</div>
+</div>
+</div>
+<div class="glass-card p-lg rounded-2xl">
+<h3 class="font-label-md text-on-surface-variant mb-md">ROC Curve</h3>
+<div class="aspect-square bg-surface-container-low rounded-xl flex items-center justify-center">
+<svg class="w-4/5 h-4/5 group" viewbox="0 0 100 100">
+<path d="M 0 100 L 0 0 L 100 0" fill="none" stroke="#e2e8f0" stroke-width="2"></path>
+<path class="transition-all duration-1000" d="M 0 100 Q 5 10, 100 0" fill="none" id="roc-path" stroke="#0051d5" stroke-dasharray="200" stroke-dashoffset="200" stroke-width="3"></path>
+<text class="text-[6px] fill-on-surface-variant font-medium" x="70" y="80">AUC: 0.994</text>
+</svg>
+</div>
+</div>
+<div class="glass-card p-lg rounded-2xl">
+<h3 class="font-label-md text-on-surface-variant mb-md">Feature Importance <span class="text-label-sm text-on-surface-variant/60 normal-case">(illustrative)</span></h3>
+<div class="space-y-md mt-md">
+<div class="space-y-xs group">
+<div class="flex justify-between text-label-sm"><span class="text-on-surface-variant">Hjorth Mobility</span><span class="">92%</span></div>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-secondary h-full rounded-full transition-all duration-1000 w-0 feature-bar" data-width="92%"></div>
+</div>
+</div>
+<div class="space-y-xs group">
+<div class="flex justify-between text-label-sm"><span class="text-on-surface-variant">Line Length</span><span class="">85%</span></div>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-secondary h-full rounded-full transition-all duration-1000 w-0 feature-bar" data-width="85%"></div>
+</div>
+</div>
+<div class="space-y-xs group">
+<div class="flex justify-between text-label-sm"><span class="text-on-surface-variant">Gamma Energy</span><span class="">78%</span></div>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-secondary h-full rounded-full transition-all duration-1000 w-0 feature-bar" data-width="78%"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Architecture Section -->
+<section class="py-xl bg-primary-container text-on-primary reveal">
+<div class="max-w-container-max mx-auto px-margin-desktop">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-xl items-center">
+<div>
+<h2 class="font-headline-lg text-headline-lg mb-md">Robust System Architecture</h2>
+<p class="text-on-primary-container font-body-lg mb-lg">A cloud-native infrastructure designed for high-availability clinical environments, integrating real-time telemetry processing with advanced ensemble machine learning models.</p>
+<ul class="space-y-md">
+<li class="flex items-center gap-sm group">
+<span class="material-symbols-outlined text-secondary group-hover:scale-125 transition-transform">check_circle</span>
+                            Distributed Feature Extraction Engine
+                        </li>
+<li class="flex items-center gap-sm group">
+<span class="material-symbols-outlined text-secondary group-hover:scale-125 transition-transform">check_circle</span>
+                            Scalable REST API Backend
+                        </li>
+<li class="flex items-center gap-sm group">
+<span class="material-symbols-outlined text-secondary group-hover:scale-125 transition-transform">check_circle</span>
+                            Asynchronous Prediction Queue
+                        </li>
+</ul>
+</div>
+<div class="glass-card bg-white p-sm rounded-2xl overflow-hidden hover:scale-105 transition-transform duration-500">
+<img alt="A high-fidelity architecture diagram for an AI healthcare application showing the flow from data ingestion through processing to the final user dashboard." class="w-full h-auto object-cover rounded-xl" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAPs_P2R0wq7CgXHC28pRypRR36-svX-B3piQXCCm_702zD8MaY0WHB5tzb_sZ7W4tiB0fK_tO1EqqoDCJCjS_fTHONl2As3sivNFfhb1B6Gigcmi8JMCtI9mPjJpzAtcMCUeJo40EeyYBrK2SjvJksYdgtB-RoFsiUW_4e8nuszDWb0c9XhaMEy04rZGG1IYVv1ndrU7sLN35YKl-xgrZR3JbQJPZX_y_dTXGojhzs7Ln87KZPqJFsiwkqOWci1Q8Cw4cfExtJGe4"/>
+</div>
+</div>
+</div>
+</section>
+<!-- Tech Stack -->
+<section class="py-xl reveal">
+<div class="max-w-container-max mx-auto px-margin-desktop text-center">
+<h2 class="font-headline-md text-headline-md mb-xl">Powered by Industry Standards</h2>
+<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-lg items-center justify-items-center opacity-60 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-500">
+<span class="font-bold text-headline-md cursor-default hover:text-secondary transition-colors">Python</span>
+<span class="font-bold text-headline-md cursor-default hover:text-secondary transition-colors">Scikit-learn</span>
+<span class="font-bold text-headline-md cursor-default hover:text-secondary transition-colors">XGBoost</span>
+<span class="font-bold text-headline-md cursor-default hover:text-secondary transition-colors">Pandas</span>
+<span class="font-bold text-headline-md cursor-default hover:text-secondary transition-colors">NumPy</span>
+<span class="font-bold text-headline-md cursor-default hover:text-secondary transition-colors">FastAPI</span>
+</div>
+</div>
+</section>
+<!-- Future Scope -->
+<section class="py-xl bg-surface-container-high reveal">
+<div class="max-w-container-max mx-auto px-margin-desktop">
+<h2 class="font-headline-lg text-headline-lg text-center mb-xl">Roadmap &amp; Future Scope</h2>
+<div class="relative">
+<div class="absolute left-1/2 -translate-x-1/2 h-full w-0.5 bg-secondary/30 hidden md:block"></div>
+<div class="space-y-xl">
+<div class="flex flex-col md:flex-row items-center gap-lg group">
+<div class="flex-1 md:text-right transition-all group-hover:translate-x-[-10px]">
+<h3 class="font-headline-md text-primary">Real-time Stream</h3>
+<p class="text-on-surface-variant">Live EEG telemetry integration via Bluetooth/WiFi protocols.</p>
+</div>
+<div class="w-12 h-12 bg-secondary rounded-full flex items-center justify-center z-10 text-on-primary shadow-lg ring-4 ring-white group-hover:scale-125 transition-transform"><span class="material-symbols-outlined">sensors</span></div>
+<div class="flex-1"></div>
+</div>
+<div class="flex flex-col md:flex-row-reverse items-center gap-lg group">
+<div class="flex-1 md:text-left transition-all group-hover:translate-x-[10px]">
+<h3 class="font-headline-md text-primary">Wearable Devices</h3>
+<p class="text-on-surface-variant">Miniaturized hardware support for portable monitoring at home.</p>
+</div>
+<div class="w-12 h-12 bg-secondary rounded-full flex items-center justify-center z-10 text-on-primary shadow-lg ring-4 ring-white group-hover:scale-125 transition-transform"><span class="material-symbols-outlined">magic_button</span></div>
+<div class="flex-1"></div>
+</div>
+<div class="flex flex-col md:flex-row items-center gap-lg group">
+<div class="flex-1 md:text-right transition-all group-hover:translate-x-[-10px]">
+<h3 class="font-headline-md text-primary">Deep Learning</h3>
+<p class="text-on-surface-variant">CNN-LSTM architectures for temporal dependency modeling.</p>
+</div>
+<div class="w-12 h-12 bg-secondary rounded-full flex items-center justify-center z-10 text-on-primary shadow-lg ring-4 ring-white group-hover:scale-125 transition-transform"><span class="material-symbols-outlined">psychology_alt</span></div>
+<div class="flex-1"></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Footer -->
+<footer class="w-full pt-xl pb-md bg-surface-container">
+<div class="max-w-container-max mx-auto px-margin-desktop">
+<div class="font-headline-md text-headline-md font-bold text-primary">NeuroSense AI</div>
+<p class="text-on-surface-variant text-label-md mt-sm">© 2026 NeuroSense AI. All rights reserved. Precision in every neuron.</p>
+</div>
+</footer>
+<script>
+    // Intersection Observer for Reveal Effects
+    const revealObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('active');
+                
+                // Special handling for child animations
+                const bars = entry.target.querySelectorAll('.feature-bar');
+                bars.forEach(bar => bar.style.width = bar.dataset.width);
+                
+                const roc = entry.target.querySelector('#roc-path');
+                if (roc) roc.style.strokeDashoffset = '0';
+            }
+        });
+    }, { threshold: 0.15 });
+
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+    // Interactive Cursor Tracking for Glass Effects
+    document.addEventListener('mousemove', (e) => {
+        const x = (e.clientX / window.innerWidth) * 100;
+        const y = (e.clientY / window.innerHeight) * 100;
+        document.documentElement.style.setProperty('--mouse-x', `${x}%`);
+        document.documentElement.style.setProperty('--mouse-y', `${y}%`);
+    });
+
+    // Prediction Logic — wired to the real NeuroSense AI backend.
+    // Change this if the API is deployed at a different origin.
+    const API_BASE_URL = window.NEUROSENSE_API_BASE_URL || 'http://localhost:8000';
+
+    let selectedFile = null;
+
+    const dropzone   = document.getElementById('dropzone');
+    const fileInput  = document.getElementById('file-input');
+    const filenameEl = document.getElementById('selected-filename');
+    const executeBtn = document.getElementById('execute-btn');
+
+    function handleFileSelected(file) {
+        if (!file) return;
+        const ext = file.name.toLowerCase().split('.').pop();
+        if (ext !== 'mat' && ext !== 'csv') {
+            filenameEl.innerText = 'Unsupported file type — please choose a .mat or .csv file';
+            filenameEl.classList.add('text-error');
+            selectedFile = null;
+            executeBtn.disabled = true;
+            return;
+        }
+        selectedFile = file;
+        filenameEl.classList.remove('text-error');
+        filenameEl.innerText = `Selected: ${file.name} (${(file.size / (1024*1024)).toFixed(1)} MB)`;
+        executeBtn.disabled = false; executeBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+    }
+
+    fileInput.addEventListener('change', (e) => handleFileSelected(e.target.files[0]));
+
+    ['dragover', 'dragenter'].forEach(evt =>
+        dropzone.addEventListener(evt, (e) => {
+            e.preventDefault();
+            dropzone.classList.add('border-secondary');
+        })
+    );
+    ['dragleave', 'drop'].forEach(evt =>
+        dropzone.addEventListener(evt, (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('border-secondary');
+        })
+    );
+    dropzone.addEventListener('drop', (e) => {
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            handleFileSelected(e.dataTransfer.files[0]);
+        }
+    });
+
+    function setLoadingState() {
+        const pane = document.getElementById('result-pane');
+        pane.classList.remove('opacity-50');
+        document.getElementById('prediction-status').innerText =
+            'Analyzing Signals... (large recordings can take up to 1-2 minutes)';
+        document.getElementById('status-bulb').classList.remove('bg-secondary', 'bg-error');
+        document.getElementById('status-bulb').classList.add('bg-amber-400');
+        executeBtn.disabled = true;
+        executeBtn.classList.add('opacity-60', 'cursor-not-allowed');
+    }
+
+    function renderError(message) {
+        document.getElementById('prediction-status').innerText = 'Analysis Failed';
+        document.getElementById('status-bulb').classList.remove('bg-amber-400');
+        document.getElementById('status-bulb').classList.add('bg-error');
+        document.getElementById('risk-indicator').innerText = 'ERROR';
+        document.getElementById('risk-indicator').className =
+            'absolute top-0 right-0 p-md font-label-sm rounded-bl-xl bg-error text-on-primary';
+        document.getElementById('prediction-val').innerText = message;
+        executeBtn.disabled = false; executeBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+    }
+
+    function renderResult(data) {
+        const isSeizure = data.prediction === 'SEIZURE';
+
+        document.getElementById('prediction-status').innerText = 'Diagnosis Complete';
+        document.getElementById('status-bulb').classList.remove('bg-amber-400');
+        document.getElementById('status-bulb').classList.add(isSeizure ? 'bg-error' : 'bg-secondary');
+
+        const confidencePct = (data.confidence * 100).toFixed(1);
+        document.getElementById('confidence-score').innerText = `${confidencePct}%`;
+        document.getElementById('confidence-bar').style.width = `${confidencePct}%`;
+
+        const predEl = document.getElementById('prediction-val');
+        predEl.innerText = isSeizure ? 'SEIZURE' : 'NON-SEIZURE';
+        predEl.className = isSeizure ? 'text-error font-bold' : 'text-secondary font-bold';
+
+        document.getElementById('avg-prob-val').innerText = data.avg_seizure_probability.toFixed(4);
+        document.getElementById('threshold-val').innerText = data.threshold_used.toFixed(4);
+
+        const riskEl = document.getElementById('risk-val');
+        riskEl.innerText = data.risk_level;
+        riskEl.className = isSeizure ? 'text-error font-bold' : 'text-primary font-bold';
+
+        const indicator = document.getElementById('risk-indicator');
+        indicator.innerText = isSeizure ? `${data.risk_level} RISK` : data.risk_level;
+        indicator.className = 'absolute top-0 right-0 p-md font-label-sm rounded-bl-xl transition-colors duration-500 ' +
+            (isSeizure ? 'bg-error text-on-primary pulse-indicator' : 'bg-surface-container text-on-surface-variant');
+
+        // Explainability-only fields — displayed, never used to derive the prediction above.
+        document.getElementById('total-windows-val').innerText = data.total_windows;
+        document.getElementById('seizure-windows-val').innerText = data.seizure_windows;
+        document.getElementById('pct-windows-val').innerText = `${data.seizure_windows_pct.toFixed(1)}%`;
+        document.getElementById('max-prob-val').innerText = data.max_seizure_probability.toFixed(4);
+
+        // Reveal the top-of-page model stats strip now that a prediction has run.
+        document.getElementById('hero-stats-placeholder').classList.add('hidden');
+        document.getElementById('hero-stats-content').classList.remove('hidden');
+        document.getElementById('hero-window-count').innerText = data.total_windows;
+
+        // Reveal the Model Performance Analytics section now that a prediction has run.
+        document.getElementById('model-performance-placeholder').classList.add('hidden');
+        document.getElementById('model-performance-content').classList.remove('hidden');
+        document.querySelectorAll('#model-performance-content .feature-bar').forEach(bar => {
+            bar.style.width = bar.dataset.width;
+        });
+        const rocPath = document.getElementById('roc-path');
+        if (rocPath) rocPath.style.strokeDashoffset = '0';
+
+        executeBtn.disabled = false; executeBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+    }
+
+    async function runPrediction() {
+        if (!selectedFile) return;
+        setLoadingState();
+
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/predict`, {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.detail || 'Prediction failed');
+            }
+            renderResult(data);
+        } catch (err) {
+            renderError(err.message || 'Could not reach the analysis server.');
+        }
+    }
+
+    // Hero 3D Scene Initialization
+    (function() {
+        const container = document.getElementById('threejs-container-ANIMATION_2');
+        if(!container) return;
+        
+        const devicePixelRatio = window.devicePixelRatio || 1;
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(width, height);
+        renderer.setPixelRatio(devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0x06B6D4, 2, 100);
+        pointLight.position.set(10, 10, 10);
+        scene.add(pointLight);
+        
+        const blueLight = new THREE.PointLight(0x2563EB, 1.5, 100);
+        blueLight.position.set(-10, -10, 10);
+        scene.add(blueLight);
+
+        const brainGroup = new THREE.Group();
+        scene.add(brainGroup);
+
+        // Core
+        const coreGeometry = new THREE.IcosahedronGeometry(2, 4);
+        const coreMaterial = new THREE.MeshPhongMaterial({
+            color: 0x06B6D4,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.15,
+        });
+        const core = new THREE.Mesh(coreGeometry, coreMaterial);
+        brainGroup.add(core);
+
+        // Outer point cloud
+        const pointsGeometry = new THREE.IcosahedronGeometry(2.2, 5);
+        const pointsMaterial = new THREE.PointsMaterial({
+            color: 0x06B6D4,
+            size: 0.03,
+            transparent: true,
+            opacity: 0.8
+        });
+        const pointCloud = new THREE.Points(pointsGeometry, pointsMaterial);
+        brainGroup.add(pointCloud);
+
+        // Synaptic Connections
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0x2563EB, transparent: true, opacity: 0.2 });
+        for (let i = 0; i < 40; i++) {
+            const geometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3().setFromSphericalCoords(2, Math.random() * Math.PI, Math.random() * Math.PI * 2),
+                new THREE.Vector3().setFromSphericalCoords(2, Math.random() * Math.PI, Math.random() * Math.PI * 2)
+            ]);
+            const line = new THREE.Line(geometry, lineMaterial);
+            brainGroup.add(line);
+        }
+
+        // Animated Waveform
+        const curvePoints = [];
+        for (let i = 0; i <= 100; i++) curvePoints.push(new THREE.Vector3((i / 10) - 5, 0, 0));
+        let curve = new THREE.CatmullRomCurve3(curvePoints);
+        let waveGeometry = new THREE.TubeGeometry(curve, 100, 0.04, 8, false);
+        const waveMaterial = new THREE.MeshPhongMaterial({ color: 0x06B6D4, emissive: 0x06B6D4, emissiveIntensity: 0.5 });
+        const wave = new THREE.Mesh(waveGeometry, waveMaterial);
+        wave.position.y = -3;
+        scene.add(wave);
+
+        camera.position.z = 6;
+
+        let mouseX = 0, mouseY = 0, targetX = 0, targetY = 0;
+        window.addEventListener('mousemove', (e) => {
+            mouseX = (e.clientX - window.innerWidth / 2) / 100;
+            mouseY = (e.clientY - window.innerHeight / 2) / 100;
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = Date.now() * 0.001;
+            targetX += (mouseX - targetX) * 0.05;
+            targetY += (mouseY - targetY) * 0.05;
+            brainGroup.rotation.y = time * 0.15 + targetX;
+            brainGroup.rotation.x = targetY;
+            
+            const positions = wave.geometry.parameters.path.points;
+            for(let i = 0; i < positions.length; i++) {
+                positions[i].y = Math.sin(i * 0.2 + time * 5) * 0.4;
+            }
+            wave.geometry.dispose();
+            wave.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(positions), 100, 0.04, 8, false);
+            pointCloud.scale.setScalar(1 + Math.sin(time * 2) * 0.05);
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+
+        animate();
+    })();
+</script>
+</body></html>
