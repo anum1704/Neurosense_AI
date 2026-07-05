@@ -64,13 +64,19 @@ class SeizureInferenceEngine:
                 "cannot run inference."
             )
 
-        # Same feature extraction as training, run across CPU cores for speed
-        # (identical values to the sequential version — see make_df_unlabeled_parallel).
-        # Falls back to the original sequential path if multiprocessing isn't
-        # available in the current environment (e.g. some restricted setups).
-        try:
-            feat_df = make_df_unlabeled_parallel(segs)
-        except Exception:
+        # Feature extraction — sequential by default (safe on constrained
+        # hosts like Render's free tier: 512MB RAM / shared CPU, where extra
+        # worker processes give no real speedup and can push memory over the
+        # limit, killing the request mid-flight). Set EXTRACTION_WORKERS>1 in
+        # the environment on hosts with real multi-core capacity to speed
+        # this up — same extract() values either way, just execution speed.
+        max_workers = int(os.environ.get("EXTRACTION_WORKERS", "1"))
+        if max_workers > 1:
+            try:
+                feat_df = make_df_unlabeled_parallel(segs, max_workers=max_workers)
+            except Exception:
+                feat_df = make_df_unlabeled(segs)
+        else:
             feat_df = make_df_unlabeled(segs)
 
         # Same feature subset, same order as training.
